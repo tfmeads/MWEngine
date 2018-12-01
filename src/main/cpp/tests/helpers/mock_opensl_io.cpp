@@ -49,6 +49,8 @@ inline int mock_android_AudioOut( OPENSL_STREAM *p, float *buffer, int size )
         case 0: // engine start test
         case 1: // engine tempo update test
 
+            Debug::log( "Audio Engine test %d done", AudioEngine::test_program );
+
             ++AudioEngine::test_program;    // advance to next test
             AudioEngine::stop();
             break;
@@ -183,10 +185,64 @@ inline int mock_android_AudioOut( OPENSL_STREAM *p, float *buffer, int size )
                         bufferPosition = AudioEngine::min_buffer_position - 1; // will be incremented at end of iteration
                 }
 
+                Debug::log( "Audio Engine test %d done", AudioEngine::test_program );
+
                 // stop the engine
 
                 ++AudioEngine::test_program;    // advance to next test
                 AudioEngine::stop();
+            }
+            break;
+
+        case 4: // multi-measure loop test
+
+            if ( Sequencer::playing )
+            {
+                // when this method runs the engine is writing its renderer output (and has thus
+                // incremented buffer position pointers accordingly), we can thus assume that on
+                // first run the current iteration is 1, not 0 (as it has completed its run)
+
+                int currentIteration = ++AudioEngine::render_iterations;
+                int maxIterations    = ( AudioEngine::max_buffer_position - AudioEngine::min_buffer_position ) / AudioEngineProps::BUFFER_SIZE;
+
+                int expectedBufferPosition = currentIteration * AudioEngineProps::BUFFER_SIZE;
+
+                AudioEngine::test_successful = true; // will be falsified by assertions below
+
+                // test 3. ensure the buffers of both the event at the end of the loop and
+                // at the start of the Sequencers loop have been mixed into the output buffer
+
+                for ( int i = 0, c = 0, bufferPosition = 88100; i < singleBufferSize; ++i, ++bufferPosition, c += outputChannels )
+                {
+                    // 77175 being audioEvent1 start, -0.25f being audioEvent1 contents, _0.5f being audioEvent2 contents
+                    SAMPLE_TYPE expected = ( bufferPosition > 77175 ) ? -0.25f : +0.5f;
+                    // divide by amount of channels (as volume is corrected for summing purposes)
+                    expected /= 2;
+
+                    SAMPLE_TYPE sample = buffer[ c ];
+
+                    if ( sample != expected )
+                    {
+                        Debug::log( "TEST 3 expected %f, got %f at iteration %d (buffer pos %d)", expected, sample, i, bufferPosition );
+
+                        AudioEngine::test_successful = false;
+                        AudioEngine::stop();
+                        break;
+                    }
+
+                    if ( bufferPosition >= AudioEngine::max_buffer_position )
+                        bufferPosition = AudioEngine::min_buffer_position - 1; // will be incremented at end of iteration
+                }
+
+                // stop the engine once it has rendered the full loop range
+
+                if ( currentIteration == maxIterations )
+                {
+                    Debug::log( "Audio Engine test %d done", AudioEngine::test_program );
+
+                    ++AudioEngine::test_program;    // advance to next test
+                    AudioEngine::stop();
+                }
             }
 
             break;
