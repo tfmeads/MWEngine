@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MWEngine example</string>
-    <string name="app_help">Example MW Engine application. Start the sequencer by hitting play!
-        You can alter the properties of the instruments and sequencer by using the sliders below, all
-        in real time! Also note how the engine pauses and picks up where it left off when suspending the app, funky huh?</string>
+    <string name="app_name">Stylophone</string>
+    <string name="app_help"></string>
     <string name="play_btn">Play</string>
     <string name="pause_btn">Pause</string>
     <string name="live_btn">C note (hold)</string>
